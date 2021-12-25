@@ -1,0 +1,42 @@
+#/bin/bash
+
+IMAGE="oglinuk/dnginx-rtmp:0.1.0"
+NAME="dnginx-rtmp-container"
+
+build() {
+	docker build . -t $IMAGE
+}
+
+container() {
+	if [[ -n $(docker ps -a | grep $NAME) ]];then
+		clean
+	fi
+
+	docker run -it -p 80:80 \
+		-p 8080:8080 \
+		-p 443:443 \
+		-p 1935:1935 \
+		--name $NAME \
+		$IMAGE
+	echo "Run './init watch' to begin watching the stream ..."
+}
+
+clean() {
+	docker stop $NAME
+	docker rm $NAME
+}
+
+stream() {
+	/usr/local/nginx/sbin/nginx
+	ffmpeg -re \
+		-i spring-blender-2019.mp4 \
+		-c copy \
+		-f flv \
+		rtmp://0.0.0.0:1935/live/stream
+}
+
+watch() {
+	ffplay rtmp://0.0.0.0:1935/live/stream
+}
+
+$*
